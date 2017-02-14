@@ -201,15 +201,17 @@ var format = {
 };
 
 function parseWorkbook (workbook,type) {
-  var first_sheet_name = workbook.SheetNames[0];
+  var specs = format[type];
 
-  /* Get worksheet */
+  var input = specs.input,
+    output = specs.output;
+
+  var first_sheet_name = workbook.SheetNames[0];
   var worksheet = workbook.Sheets[first_sheet_name];
 
-  for (z in worksheet) {
-    /* all keys that do not begin with "!" correspond to cell addresses */
-    if (z[0] !== '!') {
-      console.log(z + "=" + JSON.stringify(worksheet[z].v));
+  for (col in input) {
+    if (col[0] !== '!') {
+      console.log(col + "=" + JSON.stringify(worksheet[col].v));
     }
   }
 }
