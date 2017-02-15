@@ -1,10 +1,13 @@
-var express = require('express');
-var router = express.Router();
-var XLSX = require('xlsx');
-var multer = require('multer');
-var moment = require('moment');
+'use strict';
 
-var debug = require('debug')('eli:parser');
+const XLSX = require('xlsx');
+const multer = require('multer');
+const moment = require('moment');
+const express = require('express');
+const debug = require('debug')('eli:parser');
+const format = require('util').format;
+
+var router = express.Router();
 
 /* GET users listing. */
 router.get('/', function(req, res, next) {
@@ -14,16 +17,17 @@ router.get('/', function(req, res, next) {
 /* GET users listing. */
 var upload = multer({ dest: 'uploads' });
 router.post('/', upload.single('spreadsheet'), function(req, res, next) {
-
   if (req.file) {
     var file = req.file;
     debug(file);
 
     var workbook = XLSX.readFile(file.path);
-    parseWorkbook(workbook,'ventas');
+    var rows = workbookIntoRows(workbook);
+
+    validateVentas(rows);
   }
 
-  res.render('parser/result', { title: 'XLS Parser' });
+  res.status(200).send(rows);
 });
 
 module.exports = router;
@@ -108,49 +112,174 @@ var cols = {
 */
 
 var tiposComprobante = [
-  { name : /factura a/i, code: '001' },
-  { name : /factura b/i, code: '006' },
-  { name : /factura e/i, code: '019' },
-  { name : /nota de débito a/i, code: '002' },
-  { name : /nota de débito b/i, code: '007' },
-  { name : /nota de débito e/i, code: '020' },
-  { name : /nota crédito a/i, code: '003' },
-  { name : /nota crédito b/i, code: '008' },
-  { name : /nota crédito e/i, code: '021' },
+  { name : 'factura a', code: '001' }, // a empresa
+  { name : 'nota de débito a', code: '002' }, // a empresa
+  { name : 'nota crédito a', code: '003' }, // a empresa
+  { name : 'factura b', code: '006' },
+  { name : 'nota de débito b', code: '007' },
+  { name : 'nota crédito b', code: '008' },
+  { name : 'factura e', code: '019' }, // a empresa extranjera
+  { name : 'nota de débito e', code: '020' }, // a empresa extranjera
+  { name : 'nota crédito e', code: '021' }, // a empresa extranjera
 ];
 
 var tiposPercepciones = [
-  { name: /^iibb/i, code: 'iibb' },
-  { name: /^lhsj/i, code: 'iibb' },
-  { name: /^iva/i, code: 'iva' },
+  { name: 'iibb', code: 'iibb' },
+  { name: 'lhsj', code: 'iibb' },
+  { name: 'iva' , code: 'iva'  },
 ];
 
-var format = {
+function isComprobanteA (tipo) {
+  return ['001','002','003'].indexOf(tipo) !== -1;
+}
+function isComprobanteB (tipo) {
+  return ['006','007','008'].indexOf(tipo) !== -1;
+}
+function isComprobanteE (tipo) {
+  return ['019','020','021'].indexOf(tipo) !== -1;
+}
+
+var dataFormat = {
   ventas: {
-    input: {
-      A:{ name:'fecha', size: 8, filters: [], validators: [
-        (value) => {
-          return moment(value,'DD/MM/YYYY').isValid();
-        }
-      ], }, // transformarla en YYYYMMDD
-      B:{ name:'tipo', size: null, filters: [], validators: [] },
-      C:{ name:'numero', size: 13, filters: [], validators: [] },
+    pre: {
+      A:{
+        name:'fecha',
+        size: 8,
+        filters: [
+          value => {
+            return new Date((parseInt(value) - (25567 + 2))*86400*1000);
+          }
+        ],
+        validators: [
+          value => value != 'Invalid Date'
+        ]
+      },
+      B:{
+        name: 'tipo',
+        size: null,
+        filters: [
+          (value) => tiposComprobante.find(
+            (tipo) => new RegExp(tipo.name,'i').test(value)
+          )
+        ],
+        validators: [
+          (value) => value !== undefined
+        ]
+      },
+      C:{
+        name:'numero',
+        size: 13,
+        filters: [ ],
+        validators: [
+          (value,row,format) => value.length === format.size
+        ]
+      },
       D:{ name:'nombre cliente', size: null , filters: [], validators: [] }, // numero variable de caracteres de entrada 
-      E:{ name:'cuit cliente', size: 13, filters: [], validators: [] }, // un cuit valido
-      F:{ name:'alicuota iva', size: null, filters: [], validators: [] },
-      G:{ name:'neto', size: null, filters: [], validators: [] }, // numero de punto flotante
-      H:{ name:'impuesto', size: null, filters: [], validators: [] }, // numero de punto flotante
-      I:{ name:'importe exento', size: null, filters: [], validators: [] }, // numero de punto flotante
-      J:{ name:'tipo de percepcion', size: null, filters: [], validators: [] }, // texto que incluye iibb o iva
-      K:{ name:'importe de percepcion', size: null, filters: [], validators: [] }, // numero de punto flotante
-      L:{ name:'total', size: null, filters: [], validators: [] }, // numero de punto flotante, tiene que ser igual a la suma de L = (G + H + I + K)
+      E:{
+        name:'cuit cliente',
+        size: 11,
+        filters: [
+          (value) => value.replace(/-/g,'')
+        ],
+        validators: [
+          (value,row,format) => value.length <= format.size ,
+          (value,row) => {
+            var tipo = row['B'].f.code;
+            if (isComprobanteA(tipo) || isComprobanteE(tipo)) {
+              return value.length === 11; // CUIT
+            } else if ( isComprobanteB(tipo) ) {
+              return value.length === 8; // DNI
+            } else {
+              return false;
+            }
+          }
+        ]
+      }, // un cuit valido
+      F:{
+        name:'alicuota iva',
+        size: null,
+        filters: [
+          value => parseFloat(value)
+        ],
+        validators: [
+          (value,row) => {
+            var tipo = row['B'].f.code;
+            if (value === 0 && isComprobanteA(tipo)) {
+              return false;
+            } else {
+              return true;
+            }
+          }
+        ]
+      },
+      G:{
+        name:'neto',
+        size: null,
+        filters: [
+          value => Math.abs(parseFloat(value))
+        ],
+        validators: []
+      }, // numero de punto flotante
+      H:{
+        name:'impuesto',
+        size: null,
+        filters: [
+          value => Math.abs(parseFloat(value)),
+          (value,row) => {
+            if (value !== 0) {
+              return value;
+            } else {
+              return row.G.f * (row.F.f / 100);
+            }
+          }
+        ],
+        validators: []
+      }, // numero de punto flotante
+      I:{
+        name:'importe exento',
+        size: null,
+        filters: [
+          value => Math.abs(parseFloat(value))
+        ],
+        validators: [
+        ] 
+      }, // numero de punto flotante
+      J:{
+        name:'tipo de percepcion',
+        size: null,
+        filters: [
+          (value) => tiposPercepciones.find(
+            (tipo) => new RegExp(tipo.name,'i').test(value)
+          ),
+          (value) => value || null
+        ],
+        validators: []
+      }, // texto que incluye iibb o iva
+      K:{
+        name:'importe de percepcion',
+        size: null,
+        filters: [],
+        validators: []
+      }, // numero de punto flotante
+      L:{
+        name:'total',
+        size: null,
+        filters: [
+          value => parseFloat(value)
+        ],
+        validators: [
+          (value,row) => {
+            return value === row.G.v + row.H.v ;
+          }
+        ]
+      }, // numero de punto flotante, tiene que ser igual a la suma de L = (G + H + I + K)
       M:{ name:'codigo documento comprador', size: null, filters: [], validators: [] },
       N:{ name:'codigo de moneda', size: 3, filters: [], validators: [] },
       O:{ name:'tipo de cambio', size: 10, filters: [], validators: [] },
       P:{ name:'cantidad de alicuotas de iva', size: 1, filters: [], validators: [] },
       Q:{ name:'codigo de oepracion', size: 1, filters: [], validators: [] },
     },
-    output: [
+    post: [
       { name: 'fecha', source: 'A', size: 8, tranform: [
         (value) => {
           return moment(value).format('YYYYMMDD');
@@ -200,18 +329,60 @@ var format = {
   }
 };
 
-function parseWorkbook (workbook,type) {
-  var specs = format[type];
+function validateVentas (rows) {
+  debug('validating rows');
 
-  var input = specs.input,
-    output = specs.output;
+  var specs = dataFormat['ventas'];
+  var pre = specs.pre,
+    post = specs.post;
 
+  for (var index in rows) {
+    var row = rows[index];
+    if (!row) continue;
+    for (var col in row) {
+      var colFormat = pre[col];
+      var value = (row[col].t === 'n') ? new String(row[col].v) : row[col].v;
+
+      // pre filter
+      if (colFormat.filters.length>0) {
+        value = colFormat.filters.reduce((val,fn) => fn(val,row,colFormat),value);
+      }
+
+      row[col].f = value;
+
+      // validate
+      var isValid = colFormat.validators.every((fn) => fn(value,row,colFormat));
+      if (!isValid) {
+        var message = format('ERROR: %s is not valid in %s/%s ', value, col, index);
+        debug(message);
+        row[col].error = message;
+      }
+    }
+  }
+}
+
+function workbookIntoRows (workbook) {
   var first_sheet_name = workbook.SheetNames[0];
   var worksheet = workbook.Sheets[first_sheet_name];
 
-  for (col in input) {
-    if (col[0] !== '!') {
-      console.log(col + "=" + JSON.stringify(worksheet[col].v));
+  var rows = [], currRow = 1;
+
+  for (var cell in worksheet) {
+    debug('reading %s',cell);
+    if (cell[0] !== '!') {
+      var col = cell.match(/[A-Z]+/)[0];
+      var row = cell.match(/[0-9]+/)[0];
+      //var val = worksheet[cell].w;
+
+      if (parseInt(row) !== currRow) { // keep track of the row
+        currRow++;
+      }
+      if (rows[currRow] === undefined) { // initialize
+        rows[currRow] = {};
+      }
+      rows[currRow][col] = worksheet[cell];
     }
   }
+
+  return rows;
 }
