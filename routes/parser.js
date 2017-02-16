@@ -225,15 +225,23 @@ var dataFormat = {
         size: null,
         filters: [
           value => Math.abs(parseFloat(value)),
-          (value,row) => {
-            if (value !== 0) {
-              return value;
-            } else {
-              return row.G.f * (row.F.f / 100);
-            }
-          }
+          //(value,row) => {
+          //  if (value !== 0) {
+          //    return value;
+          //  } else {
+          //    return row.G.f * (row.F.f / 100);
+          //  }
+          //}
         ],
-        validators: []
+        validators: [
+          (value,row) => {
+            var tipo = row['B'].f.code;
+            if (isComprobanteA(tipo) && (!value||value===0)) {
+              return false;
+            }
+            return true;
+          }
+        ]
       }, // numero de punto flotante
       I:{
         name:'importe exento',
@@ -273,11 +281,10 @@ var dataFormat = {
           }
         ]
       }, // numero de punto flotante, tiene que ser igual a la suma de L = (G + H + I + K)
-      M:{ name:'codigo documento comprador', size: null, filters: [], validators: [] },
-      N:{ name:'codigo de moneda', size: 3, filters: [], validators: [] },
-      O:{ name:'tipo de cambio', size: 10, filters: [], validators: [] },
-      P:{ name:'cantidad de alicuotas de iva', size: 1, filters: [], validators: [] },
-      Q:{ name:'codigo de oepracion', size: 1, filters: [], validators: [] },
+      M:{ name:'codigo de moneda', size: 3, filters: [], validators: [] },
+      N:{ name:'tipo de cambio', size: 10, filters: [], validators: [] },
+      O:{ name:'cantidad de alicuotas de iva', size: 1, filters: [], validators: [] },
+      P:{ name:'codigo de operacion', size: 1, filters: [], validators: [] },
     },
     post: [
       { name: 'fecha', source: 'A', size: 8, tranform: [

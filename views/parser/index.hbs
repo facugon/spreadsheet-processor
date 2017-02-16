@@ -1,38 +1,78 @@
+
 <style>
   .separator { height:40px; }
+  #doc-formato {cursor:pointer;} 
+  #doc-formato > table {display:none;} 
 </style>
+
 <h1>{{title}}</h1>
 <div>
-  <h3>Formato de entrada de la planilla</h3>
-  <table class="table">
-    <thead>
-      <tr><th>Columna</th> <th>Nombre</th> <th>Tamaño</th> <th>Formato</th></tr>
-    </thead>
-    <tbody>
-      <tr><td> A </td>  <td> fecha</td> <td> 8</td> <td></td><td></td> </tr>
-      <tr><td> B </td>  <td> tipo</td> <td> null</td> <td></td> </tr>
-      <tr><td> C </td>  <td> numero</td> <td> 13</td> <td></td> </tr>
-      <tr><td> D </td>  <td> nombre ctrente</td> <td> null </td> <td></td> </tr>
-      <tr><td> E </td>  <td> cuit ctrente</td> <td> 13</td> <td></td> </tr>
-      <tr><td> F </td>  <td> atrcuota iva</td> <td> null</td> <td></td> </tr>
-      <tr><td> G </td>  <td> neto</td> <td> null</td> <td></td> </tr>
-      <tr><td> H </td>  <td> impuesto</td> <td> null</td> <td></td> </tr>
-      <tr><td> I </td>  <td> importe exento</td> <td> null</td> <td></td> </tr>
-      <tr><td> J </td>  <td> tipo de percepcion</td> <td> null</td> <td></td> </tr>
-      <tr><td> K </td>  <td> importe de percepcion</td> <td> null</td> <td></td> </tr>
-      <tr><td> L </td>  <td> total</td> <td> null</td> <td></td> </tr>
-      <tr><td> M </td>  <td> codigo documento comprador</td> <td> null</td> <td></td> </tr>
-      <tr><td> N </td>  <td> codigo de moneda</td> <td> 3</td> <td></td> </tr>
-      <tr><td> O </td>  <td> tipo de cambio</td> <td> 10</td> <td></td> </tr>
-      <tr><td> P </td>  <td> cantidad de atrcuotas de iva</td> <td> 1</td> <td></td> </tr>
-      <tr><td> Q </td>  <td> codigo de oepracion</td> <td> 1</td> <td></td> </tr>
-    </tbody>
-  </table>
+  <section id="doc-formato">
+    <h3 title="click para mas ayudar">Formato de entrada de la planilla</h3>
+    <table class="table table-striped">
+      <thead>
+        <tr><th>Columna</th> <th>Nombre</th> <th>Tamaño</th> <th>Formato</th></tr>
+      </thead>
+      <tbody>
+        <tr><td> A </td>  <td> fecha</td> <td> 8</td> <td></td> </tr>
+        <tr><td> B </td>  <td> tipo</td> <td> null</td> <td></td> </tr>
+        <tr><td> C </td>  <td> numero</td> <td> 13</td> <td></td> </tr>
+        <tr><td> D </td>  <td> nombre ctrente</td> <td> null </td> <td></td> </tr>
+        <tr><td> E </td>  <td> cuit ctrente</td> <td> 13</td> <td></td> </tr>
+        <tr><td> F </td>  <td> atrcuota iva</td> <td> null</td> <td></td> </tr>
+        <tr><td> G </td>  <td> neto</td> <td> null</td> <td></td> </tr>
+        <tr><td> H </td>  <td> impuesto</td> <td> null</td> <td></td> </tr>
+        <tr><td> I </td>  <td> importe exento</td> <td> null</td> <td></td> </tr>
+        <tr><td> J </td>  <td> tipo de percepcion</td> <td> null</td> <td></td> </tr>
+        <tr><td> K </td>  <td> importe de percepcion</td> <td> null</td> <td></td> </tr>
+        <tr><td> L </td>  <td> total</td> <td> null</td> <td></td> </tr>
+        <tr><td> M </td>  <td> codigo documento comprador</td> <td> null</td> <td></td> </tr>
+        <tr><td> N </td>  <td> codigo de moneda</td> <td> 3</td> <td></td> </tr>
+        <tr><td> O </td>  <td> tipo de cambio</td> <td> 10</td> <td></td> </tr>
+        <tr><td> P </td>  <td> cantidad de atrcuotas de iva</td> <td> 1</td> <td></td> </tr>
+        <tr><td> Q </td>  <td> codigo de oepracion</td> <td> 1</td> <td></td> </tr>
+      </tbody>
+    </table>
+  </section>
+
   <div class="separator"></div>
-  <form method="post" enctype="multipart/form-data">
-    <input type="file" name="spreadsheet">
-    <button>Start</button>
+
+  <form id="file-form" method="post" enctype="multipart/form-data">
+    <div class="form-group">
+      <div class="col-md-10">
+        <input class="form-control" type="file" name="spreadsheet">
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-default">Start Upload</button>
+      </div>
+    </div>
   </form>
+
+  <section>
+    <table class="table-striped table">
+      <thead>
+        <tr>
+          <th>A</th>
+          <th>B</th>
+          <th>C</th>
+          <th>D</th>
+          <th>E</th>
+          <th>F</th>
+          <th>G</th>
+          <th>H</th>
+          <th>I</th>
+          <th>J</th>
+          <th>K</th>
+          <th>L</th>
+          <th>M</th>
+          <th>N</th>
+          <th>O</th>
+          <th>P</th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </section>
 </div>
 
 <section data-hook="result"></section>
