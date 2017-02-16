@@ -1,5 +1,6 @@
 'use strict';
 
+var Backbone = require('backbone');
 
 var FileAction = {
   upload: function(data, next){
@@ -141,8 +142,8 @@ var App = {
   }
 };
 
-$(document).ready(function(){
+(function(){
 
   App.start();
 
-});
+})();
