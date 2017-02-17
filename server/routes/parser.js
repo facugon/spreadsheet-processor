@@ -129,6 +129,8 @@ var tiposPercepciones = [
   { name: 'iva' , code: 'iva'  },
 ];
 
+var alicuotasIVA = [ 10.5, 21, 27 ];
+
 function isComprobanteA (tipo) {
   return ['001','002','003'].indexOf(tipo) !== -1;
 }
@@ -185,10 +187,12 @@ var dataFormat = {
           (value,row,format) => value.length <= format.size ,
           (value,row) => {
             var tipo = row['B'].f.code;
-            if (isComprobanteA(tipo) || isComprobanteE(tipo)) {
+            if (isComprobanteA(tipo)) {
               return value.length === 11; // CUIT
-            } else if ( isComprobanteB(tipo) ) {
-              return value.length === 8; // DNI
+            } else if (isComprobanteE(tipo)) {
+              return value.length === 11 && /^55/.test(value); // CUIT
+            } else if (isComprobanteB(tipo)) {
+              return value.length >= 7 && value.length <= 11; // DNI
             } else {
               return false;
             }
@@ -203,12 +207,17 @@ var dataFormat = {
         ],
         validators: [
           (value,row) => {
-            var tipo = row['B'].f.code;
-            if (value === 0 && isComprobanteA(tipo)) {
+            if (isNaN(value)) return false;
+            if (alicuotasIVA.indexOf(value) === -1 && value !== 0) {
               return false;
-            } else {
-              return true;
             }
+
+            var tipo = row['B'].f.code;
+            if (isComprobanteA(tipo) && value===0) {
+              return false; // comprobante A lleva IVA
+            }
+
+            return true;
           }
         ]
       },
