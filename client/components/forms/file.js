@@ -1,17 +1,18 @@
 'use strict';
 
-var Backbone = require('backbone');
-var FileAction = require('../../actions/file');
+const View = require('ampersand-view')
+const $ = require('jquery')
+const FileAction = require('../../actions/file');
 
-var FileForm = Backbone.View.extend({
-  events:{
-    'submit':'onSubmitForm'
+module.exports = View.extend({
+  events: {
+    submit: 'onSubmitForm'
   },
-  onSubmitForm: function(event) {
+  onSubmitForm (event) {
     event.preventDefault();
 
-    var self = this,
-      $el = this.$el;
+    var self = this
+    var $el = $(this.el)
 
     var files = $el.find('input[type=file]')[0].files;
     var file = files[0];
@@ -27,7 +28,7 @@ var FileForm = Backbone.View.extend({
       return;
     }
 
-    var form = new FormData(this.$el[0]);
+    var form = new FormData($el[0]);
 
     var button = $el.find('button')[0];
     // Update button text.
@@ -43,6 +44,4 @@ var FileForm = Backbone.View.extend({
     event.stopPropagation();
     return false;
   }
-});
-
-module.exports = FileForm;
+})

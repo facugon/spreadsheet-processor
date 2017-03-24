@@ -1,49 +1,72 @@
 'use strict';
 
-var Backbone = require('backbone');
+const View = require('ampersand-view')
+const $ = require('jquery')
+const Model = require('ampersand-model')
 
-var CellView = Backbone.View.extend({
-  tagName:'td',
-  render:function(){
-    var err, val;
-    if (err = this.model.get('error')) {
-      val = err;
-      this.$el.css('color','red');
+var CellView = View.extend({
+  autoRender: true,
+  template:`<td data-hook="value"></td>`,
+  props: {
+    value: 'string'
+  },
+  bindings: {
+    value: {
+      hook: 'value'
+    }
+  },
+  render () {
+    this.renderWithTemplate(this)
+
+    var err = this.model.error
+    var val = this.model.w
+
+    if (err) {
+      this.value = err
+      this.el.style.color = 'red'
     } else {
-      val = this.model.get('w');
+      this.value = val
     }
-    this.$el.html(val);
   }
-});
+})
 
-var RowView = Backbone.View.extend({
-  tagName:'tr',
-  render:function(){
-    if (Object.keys(this.model.attributes).length===0) return;
+var CellData = Model.extend({
+  props: {
+    f: 'any',
+    t: 'any',
+    v: 'any',
+    w: 'string',
+    error: 'string'
+  }
+})
 
-    Backbone.View.prototype.render.apply(this);
-    var $container = this.$el;
-    for (var col in this.model.attributes) {
+var RowView = View.extend({
+  autoRender: true,
+  template : `<tr></tr>`,
+  render () {
+    this.renderWithTemplate(this)
+
+    if ( Object.keys(this.model._values).length === 0 ) return
+
+    for (var col in this.model._values) {
       var cell = new CellView({
-        model: new Backbone.Model(this.model.attributes[col])
-      });
-      cell.render();
-      cell.$el.appendTo($container);
+        model:  new CellData( this.model._values[col])
+      })
+
+      this.renderSubview(cell, this.query('tr'))
     }
   }
 });
 
-var TableBody = Backbone.View.extend({
-  render: function(){
-    Backbone.View.prototype.render.apply(this);
-    var $container = this.$el;
-    $container.empty();
-    this.collection.forEach(function(row){
-      var rowView = new RowView({ model: row });
-      rowView.render();
-      rowView.$el.appendTo($container);
-    });
-  }
-});
+module.exports = View.extend({
+  template: `<tbody></tbody>`,
+  render () {
+    this.renderWithTemplate(this)
 
-module.exports = TableBody;
+    this.renderCollection(
+      this.collection,
+      RowView,
+      this.query('tbody')
+    )
+  }
+})
